@@ -6,3 +6,5 @@ It is essentially a single-thread C translation of the official GUI C# utility t
 
 Currently, only programming Mercury dev boards (both the 50000/200000 gate variants) are supported.
 Writing arbitrary data to flash and improvements in programming time will follow.
+
+```mercpcl``` requires a C89 compiler that understands line comments (so Microsoft's C Compiler should work), libftdi, and libusb-1.0 (for future compatibility). The utility was developed in a NetBSD environment, and provides a way for using Mercury in environments where .NET does not exist.
