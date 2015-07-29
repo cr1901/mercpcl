@@ -1,0 +1,25 @@
+# - Try to find libftdi
+# Once done, this will define
+#
+#  LIBFTDI_FOUND - system has LIBFTDI
+#  LIBFTDI_INCLUDE_DIRS - the LIBFTDI include directories
+#  LIBFTDI_LIBRARIES - link these to use LIBFTDI
+
+# Inspired by: https://github.com/psi46/pxar/blob/master/cmake/FindFTD2XX.cmake
+include(LibFindMacros)
+
+# Include dir
+find_path(LIBFTDI_INCLUDE_DIR
+  NAMES ftdi.h
+  PATHS ${PROJECT_SOURCE_DIR}/extern/
+)
+
+# Finally the library itself
+find_library(LIBFTDI_LIBRARY
+  NAMES ftdi ftdi1
+  PATHS ${PROJECT_SOURCE_DIR}/extern/
+)
+
+# Set the include dir variables and the libraries and let libfind_process do the rest.
+# NOTE: Singular variables for this library, plural for libraries this this lib depends on.
+libfind_process(LIBFTDI)
