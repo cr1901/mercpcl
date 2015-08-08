@@ -4,7 +4,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 add_executable(mercpcl mercpcl.c)
 
-find_package(LIBFTDI REQUIRED)
+find_package(libFTDI REQUIRED)
 include_directories(${LIBFTDI_INCLUDE_DIR})
 target_link_libraries(mercpcl ${LIBFTDI_LIBRARY})
 
