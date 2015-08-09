@@ -43,6 +43,7 @@ typedef struct opts
 // Globals
 char serial_num[6] = {'\0'};
 char file_buf[264] = {'\0'};
+char bitbang_buf[5000] = {'\0'};
 
 
 // Fcn Prototypes
@@ -55,6 +56,7 @@ void print_usage();
 int SPI_sel(struct ftdi_context * ftdic, unsigned char sel);
 int SPI_out(struct ftdi_context * ftdic, char * bytes, unsigned int len, unsigned char sel);
 int SPI_in(struct ftdi_context * ftdic, char * bytes, unsigned int len, unsigned char sel);
+int SPI_bulk(char * bytes_to_write, char * bitbang_stream, unsigned int len, unsigned char sel);
 
 // Programmer fcns
 unsigned int flash_ID(struct ftdi_context * ftdic);
@@ -392,8 +394,11 @@ int flash_write(struct ftdi_context * ftdic, char * bytes, unsigned int page_add
 {
   char write_flash_buffer[4] = {0x84, 0x00, 0x00, 0x00}; // Always start at buffer addr 0.
   char buf_to_flash[4] = {0x88, 0x00, 0x00, 0x00};
+  char idle[1] = {0x00}; /* OR'ed with sel in SPI_bulk to create SPI
+  idle selection signal. */
   unsigned char paddr_hi, paddr_lo;
   int rc = 0;
+  int bitbang_bufsiz = 0;
 
   paddr_hi = (((page_addr & 0x3FF) >> 7) & 0x07);
   paddr_lo = (((page_addr & 0x3FF) << 1) & 0xFE);
@@ -407,11 +412,14 @@ int flash_write(struct ftdi_context * ftdic, char * bytes, unsigned int page_add
   printf("Flash write to page %d\n", page_addr); 
 #endif
 
-  SPI_out(ftdic, write_flash_buffer, 4, FLASH_SEL);
-  SPI_out(ftdic, bytes, 264, FLASH_SEL);
-  SPI_sel(ftdic, IDLE_SEL); // Stop write command.
-  SPI_out(ftdic, buf_to_flash, 4, FLASH_SEL);
-  SPI_sel(ftdic, IDLE_SEL); // Command doesn't start until CS=>high.
+// TODO: Remove global state
+  bitbang_bufsiz = SPI_bulk(write_flash_buffer, bitbang_buf, 4, FLASH_SEL);
+  bitbang_bufsiz += SPI_bulk(bytes, bitbang_buf + bitbang_bufsiz, 264, FLASH_SEL);
+  bitbang_bufsiz += SPI_bulk(idle, bitbang_buf + bitbang_bufsiz, 1, IDLE_SEL);
+  bitbang_bufsiz += SPI_bulk(buf_to_flash, bitbang_buf + bitbang_bufsiz, 4, FLASH_SEL);
+  bitbang_bufsiz += SPI_bulk(idle, bitbang_buf + bitbang_bufsiz, 1, IDLE_SEL);
+
+  ftdi_write_data(ftdic, bitbang_buf, 17 * (4 + 264 + 1 + 4 + 1));
    
   if(flash_poll(ftdic, 300000))
   {
@@ -420,6 +428,33 @@ int flash_write(struct ftdi_context * ftdic, char * bytes, unsigned int page_add
 
   DEASSERT_PROG_PIN(ftdic);
   return rc;
+}
+
+// Do NOT use return value for error checking- it is simply a convenience
+// so that the next free index need not be calculated.
+int SPI_bulk(char * bytes_to_write, char * bitbang_stream, unsigned int len, unsigned char sel)
+{
+  int byte_count, bitbang_offset;
+
+  for(byte_count = 0, bitbang_offset = 0; byte_count < len; byte_count++)
+  {
+	int i, bitmask;
+    int curr_byte = bytes_to_write[byte_count];
+
+    for(bitmask = 0x80, i = bitbang_offset; bitmask; bitmask >>= 1, i = i + 2)
+    {
+      int curr_bit = (curr_byte & bitmask) ? MOSI : 0;
+
+      bitbang_stream[i]  = curr_bit | sel;
+      bitbang_stream[i + 1]  = curr_bit | SCLK | sel;
+    }
+
+    assert(i == bitbang_offset + 16);
+    bitbang_stream[i] = '\0'; // TODO: Is this necessary to set all bits to zero?
+    bitbang_offset = i + 1;
+  }
+
+  return bitbang_offset;
 }
 
 
