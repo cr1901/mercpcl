@@ -127,6 +127,10 @@ int main(int argc, char * argv[])
     printf("Error erasing Flash: %s. Aborting.\n", ftdi_get_error_string(&ftdic));
     return -1;
   }
+  else
+  {
+	printf("Flash erase was okay.\n");
+  }
 
 // TODO: Strictly speaking, it's not actually possible to get the size of a binary file in C.
 // Macroize away based on platform. Assume it's a valid size for now. 
@@ -428,7 +432,7 @@ int flash_poll(struct ftdi_context * ftdic, int timeout)
   int attempts = 0;
 
   // Assume R/Ws will succeed for simplicity.
-  while(!done && attempts < timeout)
+  while(!done && (attempts < timeout))
   {
     SPI_out(ftdic, &status_read, 1, FLASH_SEL);
 
