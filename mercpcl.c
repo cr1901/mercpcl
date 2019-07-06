@@ -185,6 +185,11 @@ int parse_args(int argc, char * argv[], OPTS * clopts)
     return -1;
   }
 
+  if(!strcmp("-h", argv[1]))
+  {
+    return -1;
+  }
+
   clopts->bitstream_name = argv[1];
   clopts->eeprom_image = NULL;
   clopts->image_start = 0;
@@ -195,7 +200,7 @@ int parse_args(int argc, char * argv[], OPTS * clopts)
 
 void print_usage()
 {
-  printf("Usage: mercpcl [bitstream_file]\n");
+  printf("Usage: mercpcl [-h] [bitstream_file]\n");
 }
 
 int open_merc(struct ftdi_context * ftdic, unsigned char * serial_buf, unsigned int serial_len)
