@@ -36,32 +36,33 @@ typedef struct opts
 {
   char * bitstream_name;
   char * eeprom_image;
-  unsigned long image_start; 
+  unsigned long image_start;
   int flash_image;
 }OPTS;
 
 // Globals
-char serial_num[6] = {'\0'};
-char file_buf[264] = {'\0'};
-char bitbang_buf[5000] = {'\0'};
+unsigned char serial_num[6] = {'\0'};
+unsigned char file_buf[264] = {'\0'};
+unsigned char bitbang_buf[5000] = {'\0'};
 
 
 // Fcn Prototypes
-int open_merc(struct ftdi_context * ftdic, char * serial_buf, unsigned int seral_len);
+int open_merc(struct ftdi_context * ftdic, unsigned char * serial_buf, unsigned int seral_len);
 void close_merc(struct ftdi_context * ftdic);
 int parse_args(int argc, char * argv[], OPTS * clopts);
 void print_usage();
 
 // SPI fcns
 int SPI_sel(struct ftdi_context * ftdic, unsigned char sel);
-int SPI_out(struct ftdi_context * ftdic, char * bytes, unsigned int len, unsigned char sel);
-int SPI_in(struct ftdi_context * ftdic, char * bytes, unsigned int len, unsigned char sel);
-int SPI_bulk(char * bytes_to_write, char * bitbang_stream, unsigned int len, unsigned char sel);
+int SPI_out(struct ftdi_context * ftdic, unsigned char * bytes, unsigned int len, unsigned char sel);
+int SPI_in(struct ftdi_context * ftdic, unsigned char * bytes, unsigned int len, unsigned char sel);
+int SPI_bulk(unsigned char * bytes_to_write, unsigned char * bitbang_stream, unsigned int len, unsigned char sel);
 
 // Programmer fcns
+int do_erase_cmd(struct ftdi_context * ftdic, unsigned char * cmd_string, int timeout);
 unsigned int flash_ID(struct ftdi_context * ftdic);
 int flash_erase(struct ftdi_context * ftdic, unsigned int len, unsigned long start_addr, unsigned int flash_id);
-int flash_write(struct ftdi_context * ftdic, char * bytes, unsigned int page_addr);
+int flash_write(struct ftdi_context * ftdic, unsigned char * bytes, unsigned int page_addr);
 int flash_poll(struct ftdi_context * ftdic, int timeout);
 unsigned int flash_size(unsigned int flash_id);
 
@@ -74,7 +75,9 @@ int main(int argc, char * argv[])
   unsigned int retrieved_id;
   unsigned int page_addr;
   size_t chars_read;
-  
+
+  (void) rc;
+
   if(parse_args(argc, argv, &clopts))
   {
     print_usage();
@@ -92,7 +95,7 @@ int main(int argc, char * argv[])
     // printf("Device was found okay! Serial number is %s.\n", serial_num);
   }
 
-  
+
   bitstream = fopen(clopts.bitstream_name, "rb");
   if(bitstream == NULL)
   {
@@ -109,7 +112,7 @@ int main(int argc, char * argv[])
      return -1;
     }
   }
-  
+
   if(DEASSERT_PROG_PIN(&ftdic)) // Just in case...
   {
     printf("Error deasserting prog pin.\n");
@@ -117,8 +120,8 @@ int main(int argc, char * argv[])
   }
 
   retrieved_id = flash_ID(&ftdic) & 0xFFFF;
- 
-  if(!(retrieved_id == FLASH_DEV2B_ID || retrieved_id == FLASH_DEV8B_ID)) 
+
+  if(!(retrieved_id == FLASH_DEV2B_ID || retrieved_id == FLASH_DEV8B_ID))
   {
     printf("Error reading Flash ID: %s. Aborting.\n", ftdi_get_error_string(&ftdic));
     return -1;
@@ -135,7 +138,7 @@ int main(int argc, char * argv[])
   }
 
 // TODO: Strictly speaking, it's not actually possible to get the size of a binary file in C.
-// Macroize away based on platform. Assume it's a valid size for now. 
+// Macroize away based on platform. Assume it's a valid size for now.
 
   page_addr = 0;
   while((chars_read = fread(file_buf, 1, 264, bitstream)) == 264)
@@ -170,7 +173,7 @@ int main(int argc, char * argv[])
 
   DEASSERT_PROG_PIN(&ftdic);
   close_merc(&ftdic);
-  
+
 
   return 0;
 }
@@ -186,8 +189,8 @@ int parse_args(int argc, char * argv[], OPTS * clopts)
   clopts->eeprom_image = NULL;
   clopts->image_start = 0;
   clopts->flash_image = 0;
- 
-  return 0; 
+
+  return 0;
 }
 
 void print_usage()
@@ -195,9 +198,12 @@ void print_usage()
   printf("Usage: mercpcl [bitstream_file]\n");
 }
 
-int open_merc(struct ftdi_context * ftdic, char * serial_buf, unsigned int serial_len)
+int open_merc(struct ftdi_context * ftdic, unsigned char * serial_buf, unsigned int serial_len)
 {
   struct libusb_device_descriptor desc;
+  (void) desc;
+  (void) serial_buf;
+  (void) serial_len;
 
   if(ftdi_init(ftdic) || \
        ftdi_usb_open_desc(ftdic, 0x0403, 0x6001, "Mercury FPGA", NULL) || \
@@ -205,7 +211,7 @@ int open_merc(struct ftdi_context * ftdic, char * serial_buf, unsigned int seria
   {
     return -1;
   }
-  
+
   // TODO: The libftdi against which this app was developed is too old to reliably get the serial number.
   // libusb_get_device_descriptor(ftdic->usb_dev, &desc);
   // printf("%d\n", desc.iSerialNumber);
@@ -240,24 +246,25 @@ int SPI_sel(struct ftdi_context * ftdic, unsigned char sel)
 
 // If deslect should happen after calling this function, it needs to be done manually!
 // Flash expects CS to stay asserted between data out and data in (PC's point-of-view).
-int SPI_out(struct ftdi_context * ftdic, char * bytes, unsigned int len, unsigned char sel)
+int SPI_out(struct ftdi_context * ftdic, unsigned char * bytes, unsigned int len, unsigned char sel)
 {
   int byte_count, bitmask, i;
   unsigned char byte_stream[17];
 
-  for(byte_count = 0; byte_count < len; byte_count++)
+  (void) i;
+
+  for(byte_count = 0; (unsigned int) byte_count < len; byte_count++)
   {
     int curr_byte = bytes[byte_count];
     for(bitmask = 0x80, i = 0; bitmask; bitmask >>= 1, i = i + 2)
     {
-      int ftdi_byte; 
       int curr_bit = (curr_byte & bitmask) ? MOSI : 0;
-      
+
       byte_stream[i]  = curr_bit | sel;
       byte_stream[i + 1]  = curr_bit | SCLK | sel;
     }
-    
-    assert(i == 16);   
+
+    assert(i == 16);
     byte_stream[i] = '\0';
 
 #ifdef M_DEBUG
@@ -266,33 +273,33 @@ int SPI_out(struct ftdi_context * ftdic, char * bytes, unsigned int len, unsigne
       printf("byte_stream[%d]: %02X\n", i, byte_stream[i]);
     }
 #endif
-  
-    ftdi_write_data(ftdic, byte_stream, 17);
-  } 
 
-  return 0; 
+    ftdi_write_data(ftdic, byte_stream, 17);
+  }
+
+  return 0;
 }
 
 
-int SPI_in(struct ftdi_context * ftdic, char * bytes, unsigned int len, unsigned char sel)
+int SPI_in(struct ftdi_context * ftdic, unsigned char * bytes, unsigned int len, unsigned char sel)
 {
-  int byte_count, bit_no, i;
-  char pin_vals;
+  int byte_count, bit_no;
+  unsigned char pin_vals;
 
-  for(byte_count = 0; byte_count < len; byte_count++)
+  for(byte_count = 0; (unsigned int) byte_count < len; byte_count++)
   {
-    char byte_read = 0; 
+    char byte_read = 0;
 
     for(bit_no = 7; bit_no >= 0; bit_no--)
     {
-      char pin_vals;
-      unsigned char clock_pulse = (SCLK | sel); 
-      
+      unsigned char pin_vals;
+      unsigned char clock_pulse = (SCLK | sel);
+
       ftdi_read_pins(ftdic, &pin_vals);
-      byte_read |= ((pin_vals & MISO) ? 1 : 0) << bit_no; 
- 
+      byte_read |= ((pin_vals & MISO) ? 1 : 0) << bit_no;
+
       ftdi_write_data(ftdic, &clock_pulse, 1);
-      clock_pulse = sel; 
+      clock_pulse = sel;
       ftdi_write_data(ftdic, &clock_pulse, 1);
     }
 
@@ -314,7 +321,7 @@ int SPI_in(struct ftdi_context * ftdic, char * bytes, unsigned int len, unsigned
 unsigned int flash_ID(struct ftdi_context * ftdic)
 {
   unsigned char id_cmd = 0x9F;
-  unsigned int id; // Assuming 32-bit int here. Should be fine but if not will change. 
+  unsigned int id; // Assuming 32-bit int here. Should be fine but if not will change.
 
   if(SPI_out(ftdic, &id_cmd, 1, FLASH_SEL))
   {
@@ -334,7 +341,7 @@ unsigned int flash_ID(struct ftdi_context * ftdic)
 
 restore:
   SPI_sel(ftdic, IDLE_SEL);
-  return id; 
+  return id;
 }
 
 // TODO: Meaningfully support start_addr (erase on block/page boundaries.
@@ -344,9 +351,12 @@ int flash_erase(struct ftdi_context * ftdic, unsigned int len, unsigned long sta
   int rc = 0;
   int num_sectors;
   int i;
-  char erase_sector_0a[4] = {0x7C, 0x00, 0x00, 0x00};  
-  char erase_sector_0b[4] = {0x7C, 0x00, 0x10, 0x00}; 
-  char erase_sector_other[4] = {0x7C, 0x00, 0x00, 0x00};
+  unsigned char erase_sector_0a[4] = {0x7C, 0x00, 0x00, 0x00};
+  unsigned char erase_sector_0b[4] = {0x7C, 0x00, 0x10, 0x00};
+  unsigned char erase_sector_other[4] = {0x7C, 0x00, 0x00, 0x00};
+
+  (void) len;
+  (void) start_addr;
 
   ASSERT_PROG_PIN(ftdic); // Ensure FPGA ignores bus.
 //  int num_sectors = ;
@@ -371,7 +381,7 @@ int flash_erase(struct ftdi_context * ftdic, unsigned int len, unsigned long sta
     {
       rc = 1;
       break;
-    } 
+    }
   }
 
 restore_state:
@@ -379,22 +389,22 @@ restore_state:
   return rc;
 }
 
-int do_erase_cmd(struct ftdi_context * ftdic, char * cmd_string, int timeout)
+int do_erase_cmd(struct ftdi_context * ftdic, unsigned char * cmd_string, int timeout)
 {
   // Assume this succeeds- flash_poll will detect errors.
   SPI_out(ftdic, cmd_string, 4, FLASH_SEL);
   SPI_sel(ftdic, IDLE_SEL); // Command doesn't start until CS=>high.
   return flash_poll(ftdic, timeout);
-} 
+}
 
 
 
 // Expects a page of bytes (264)
-int flash_write(struct ftdi_context * ftdic, char * bytes, unsigned int page_addr)
+int flash_write(struct ftdi_context * ftdic, unsigned char * bytes, unsigned int page_addr)
 {
-  char write_flash_buffer[4] = {0x84, 0x00, 0x00, 0x00}; // Always start at buffer addr 0.
-  char buf_to_flash[4] = {0x88, 0x00, 0x00, 0x00};
-  char idle[1] = {0x00}; /* OR'ed with sel in SPI_bulk to create SPI
+  unsigned char write_flash_buffer[4] = {0x84, 0x00, 0x00, 0x00}; // Always start at buffer addr 0.
+  unsigned char buf_to_flash[4] = {0x88, 0x00, 0x00, 0x00};
+  unsigned char idle[1] = {0x00}; /* OR'ed with sel in SPI_bulk to create SPI
   idle selection signal. */
   unsigned char paddr_hi, paddr_lo;
   int rc = 0;
@@ -408,8 +418,8 @@ int flash_write(struct ftdi_context * ftdic, char * bytes, unsigned int page_add
 
   ASSERT_PROG_PIN(ftdic);
 
-#ifdef M_DEBUG  
-  printf("Flash write to page %d\n", page_addr); 
+#ifdef M_DEBUG
+  printf("Flash write to page %d\n", page_addr);
 #endif
 
 // TODO: Remove global state
@@ -420,7 +430,7 @@ int flash_write(struct ftdi_context * ftdic, char * bytes, unsigned int page_add
   bitbang_bufsiz += SPI_bulk(idle, bitbang_buf + bitbang_bufsiz, 1, IDLE_SEL);
 
   ftdi_write_data(ftdic, bitbang_buf, 17 * (4 + 264 + 1 + 4 + 1));
-   
+
   if(flash_poll(ftdic, 300000))
   {
     rc = 1;
@@ -432,13 +442,13 @@ int flash_write(struct ftdi_context * ftdic, char * bytes, unsigned int page_add
 
 // Do NOT use return value for error checking- it is simply a convenience
 // so that the next free index need not be calculated.
-int SPI_bulk(char * bytes_to_write, char * bitbang_stream, unsigned int len, unsigned char sel)
+int SPI_bulk(unsigned char * bytes_to_write, unsigned char * bitbang_stream, unsigned int len, unsigned char sel)
 {
   int byte_count, bitbang_offset;
 
-  for(byte_count = 0, bitbang_offset = 0; byte_count < len; byte_count++)
+  for(byte_count = 0, bitbang_offset = 0; (unsigned int) byte_count < len; byte_count++)
   {
-	int i, bitmask;
+    int i, bitmask;
     int curr_byte = bytes_to_write[byte_count];
 
     for(bitmask = 0x80, i = bitbang_offset; bitmask; bitmask >>= 1, i = i + 2)
@@ -479,8 +489,8 @@ int flash_poll(struct ftdi_context * ftdic, int timeout)
       done = 1;
     }
     else
-    { 
-      attempts++; 
+    {
+      attempts++;
     }
   }
 
@@ -510,4 +520,3 @@ unsigned int flash_size(unsigned int flash_id)
 
   return size;
 }
-

@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(mercpcl)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+set(CMAKE_C_FLAGS "-Wall -Wextra -Werror")
 set(CMAKE_C_FLAGS_PROFILE "-pg")
 
 add_executable(mercpcl mercpcl.c)
@@ -16,9 +17,8 @@ endif(CMAKE_BUILD_TYPE MATCHES Profile)
 include_directories(${LIBFTDI_INCLUDE_DIR})
 target_link_libraries(mercpcl ${LIBFTDI_LIBRARY} ${STATIC_LIBUSB})
 
-if(MSVC) # Assume MSVC users don't want a bin directory 
+if(MSVC) # Assume MSVC users don't want a bin directory
 install(TARGETS mercpcl DESTINATION .)
 else(MSVC)
 install(TARGETS mercpcl DESTINATION bin)
 endif(MSVC)
-
