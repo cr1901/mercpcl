@@ -91,8 +91,7 @@ int main(int argc, char * argv[])
   }
   else
   {
-    printf("Device was found okay! Serial number can not be obtained.\n");
-    // printf("Device was found okay! Serial number is %s.\n", serial_num);
+    printf("Device was found okay! Serial number is %s.\n", serial_num);
   }
 
 
@@ -206,9 +205,6 @@ void print_usage()
 int open_merc(struct ftdi_context * ftdic, unsigned char * serial_buf, unsigned int serial_len)
 {
   struct libusb_device_descriptor desc;
-  (void) desc;
-  (void) serial_buf;
-  (void) serial_len;
 
   if(ftdi_init(ftdic) || \
        ftdi_usb_open_desc(ftdic, 0x0403, 0x6001, "Mercury FPGA", NULL) || \
@@ -217,10 +213,8 @@ int open_merc(struct ftdi_context * ftdic, unsigned char * serial_buf, unsigned 
     return -1;
   }
 
-  // TODO: The libftdi against which this app was developed is too old to reliably get the serial number.
-  // libusb_get_device_descriptor(ftdic->usb_dev, &desc);
-  // printf("%d\n", desc.iSerialNumber);
-  // libusb_get_string_descriptor_ascii(ftdic->usb_dev, desc.iSerialNumber, serial_buf, serial_len);
+  libusb_get_device_descriptor(libusb_get_device(ftdic->usb_dev), &desc);
+  libusb_get_string_descriptor_ascii(ftdic->usb_dev, desc.iSerialNumber, serial_buf, serial_len);
 
   if(DEASSERT_PROG_PIN(ftdic))
   {
@@ -240,8 +234,6 @@ void close_merc(struct ftdi_context * ftdic)
 {
   ftdi_deinit(ftdic);
 }
-
-
 
 int SPI_sel(struct ftdi_context * ftdic, unsigned char sel)
 {

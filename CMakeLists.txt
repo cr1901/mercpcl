@@ -11,7 +11,10 @@ set(CMAKE_FIND_LIBRARY_SUFFIXES ".a" ${CMAKE_FIND_LIBRARY_SUFFIXES})
 set(STATIC_LIBUSB libusb.a)
 find_package(libFTDI REQUIRED)
 else(CMAKE_BUILD_TYPE MATCHES Profile)
+find_package(libusb-1.0 REQUIRED)
 find_package(libFTDI REQUIRED)
+set(STATIC_LIBUSB ${LIBUSB-1.0_LIBRARY}) # Not sure what to do w/ Profile yet,
+# so just reuse STATIC_LIBUSB until I can improve the Profile build type.
 endif(CMAKE_BUILD_TYPE MATCHES Profile)
 
 include_directories(${LIBFTDI_INCLUDE_DIR})
