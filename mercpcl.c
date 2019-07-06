@@ -133,7 +133,8 @@ int main(int argc, char * argv[])
   }
   else
   {
-	printf("Flash erase was okay.\n");
+    printf("Flash erase was okay.\n");
+    printf("Programming bitstream; each '*' is 4224 bytes:\n");
   }
 
 // TODO: Strictly speaking, it's not actually possible to get the size of a binary file in C.
@@ -143,7 +144,7 @@ int main(int argc, char * argv[])
   while((chars_read = fread(file_buf, 1, 264, bitstream)) == 264)
   {
     flash_write(&ftdic, file_buf, page_addr);
-    if((++page_addr % 64) == 0)
+    if((++page_addr % 16) == 0)
     {
       putc('*', stdout);
       fflush(stdout);
