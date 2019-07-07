@@ -9,15 +9,15 @@
 include(LibFindMacros)
 
 # Include dir
-find_path(LIBFTDI_INCLUDE_DIR
+find_path(LIBFTDI1_INCLUDE_DIR
   NAMES libftdi1/ftdi.h
 )
 
 # Finally the library itself
-find_library(LIBFTDI_LIBRARY
+find_library(LIBFTDI1_LIBRARY
   NAMES ftdi ftdi1
 )
 
 # Set the include dir variables and the libraries and let libfind_process do the rest.
 # NOTE: Singular variables for this library, plural for libraries this this lib depends on.
-libfind_process(LIBFTDI)
+libfind_process(LIBFTDI1)
