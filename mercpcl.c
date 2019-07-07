@@ -166,10 +166,11 @@ int main(int argc, char * argv[])
 
   printf("Mercury board programmed successfully.\n");
 
-  /* if(fclose(bitstream))
+  if(fclose(bitstream))
   {
-    rc |= -1;
-*/
+    printf("Warning: bitstream file close failed. Check your system.\n"
+           "Exiting with success.\n");
+  }
 
   DEASSERT_PROG_PIN(&ftdic);
   close_merc(&ftdic);
