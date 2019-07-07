@@ -1,4 +1,0 @@
-# If not using Unix hierarchy, use this directory to store external headers and
-# libraries, such as libftdi.
-*
-!.gitignore
