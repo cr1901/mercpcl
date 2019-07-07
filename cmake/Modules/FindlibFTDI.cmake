@@ -10,14 +10,12 @@ include(LibFindMacros)
 
 # Include dir
 find_path(LIBFTDI_INCLUDE_DIR
-  NAMES ftdi.h
-  PATHS ${PROJECT_SOURCE_DIR}/extern/
+  NAMES libftdi1/ftdi.h
 )
 
 # Finally the library itself
 find_library(LIBFTDI_LIBRARY
   NAMES ftdi ftdi1
-  PATHS ${PROJECT_SOURCE_DIR}/extern/
 )
 
 # Set the include dir variables and the libraries and let libfind_process do the rest.
