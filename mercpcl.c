@@ -4,8 +4,8 @@
 #include <errno.h>
 #include <assert.h>
 
-#include <libftdi1/ftdi.h>
-#include <libusb-1.0/libusb.h>
+#include <ftdi.h>
+#include <libusb.h>
 
 #define BIT(_x) (1 << _x)
 
